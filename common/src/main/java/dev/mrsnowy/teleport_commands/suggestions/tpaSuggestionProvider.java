@@ -26,7 +26,7 @@ public class tpaSuggestionProvider implements SuggestionProvider<CommandSourceSt
 
             for (tpa.tpaArrayClass tpaEntry : playerTpaList) {
 
-                Optional<String> recPlayerName = Optional.ofNullable(context.getSource().getServer().getPlayerList().getPlayer(UUID.fromString(tpaEntry.InitPlayer)).getName().getString());
+                Optional<String> recPlayerName = Optional.ofNullable(context.getSource().getServer().getPlayerList().getPlayer(UUID.fromString(tpaEntry.InitPlayer))).map(p -> p.getName().getString());
 
                 if (recPlayerName.isPresent()) {
                     builder.suggest(recPlayerName.get());
