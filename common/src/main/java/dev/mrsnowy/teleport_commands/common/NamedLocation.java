@@ -1,7 +1,6 @@
 package dev.mrsnowy.teleport_commands.common;
 
 import dev.mrsnowy.teleport_commands.TeleportCommands;
-import dev.mrsnowy.teleport_commands.storage.StorageManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 
@@ -63,6 +62,5 @@ public class NamedLocation {
 
     public void setName(String name) throws Exception {
         this.name = name;
-        StorageManager.StorageToJSON();
     }
 }

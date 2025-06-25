@@ -47,15 +47,21 @@ public class Player {
 
     // Adds a NamedLocation to the home list, returns true if it already exists
     public boolean addHome(NamedLocation home) throws Exception {
-        if (Homes.containsKey(home.getName())) {
-            // Home with same name found!
+        if (Homes.containsKey(home.getName())) // Home with same name found!
             return true;
+        Homes.put(home.getName(), home);
+        StorageManager.StorageToJSON();
+        return false;
+    }
 
-        } else {
-            Homes.put(home.getName(), home);
-            StorageManager.StorageToJSON();
+    public boolean renameHome(String oldName, String newName) throws Exception {
+        if(!Homes.containsKey(oldName))
             return false;
-        }
+        NamedLocation home = Homes.remove(oldName);
+        home.setName(newName);
+        Homes.put(newName, home);
+        StorageManager.StorageToJSON();
+        return true;
     }
 
     // -----

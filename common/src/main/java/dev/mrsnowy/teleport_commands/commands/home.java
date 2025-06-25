@@ -321,7 +321,7 @@ public class home {
         }
 
         // Rename home
-        optionalHome.get().setName(newHomeName);
+        playerStorage.renameHome(homeName, newHomeName);
 
         // check if the current home is the default, then change it to the new name
         if (playerStorage.getDefaultHome().equals(homeName)) {
