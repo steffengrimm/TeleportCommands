@@ -63,6 +63,6 @@ public class NamedLocation {
 
     public void setName(String name) throws Exception {
         this.name = name;
-        StorageManager.StorageSaver();
+        StorageManager.StorageToJSON();
     }
 }

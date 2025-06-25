@@ -42,18 +42,18 @@ public class Player {
 
     public void setDefaultHome(String defaultHome) throws Exception {
         this.DefaultHome = defaultHome;
-        StorageManager.StorageSaver();
+        StorageManager.StorageToJSON();
     }
 
     // Adds a NamedLocation to the home list, returns true if it already exists
     public boolean addHome(NamedLocation home) throws Exception {
-        if (getHome(home.getName()).isPresent()) {
+        if (Homes.containsKey(home.getName())) {
             // Home with same name found!
             return true;
 
         } else {
             Homes.put(home.getName(), home);
-            StorageManager.StorageSaver();
+            StorageManager.StorageToJSON();
             return false;
         }
     }
@@ -63,6 +63,6 @@ public class Player {
     public void deleteHome(NamedLocation home) throws Exception {
         Homes.remove(home.getName());
 
-        StorageManager.StorageSaver();
+        StorageManager.StorageToJSON();
     }
 }
