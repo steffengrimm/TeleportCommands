@@ -18,20 +18,11 @@ import static dev.mrsnowy.teleport_commands.utils.tools.*;
 
 public class tpa {
 
-    public static final ArrayList<tpaArrayClass> tpaList = new ArrayList<>();
-
-    public static class tpaArrayClass {
-        public final String InitPlayer;
-        public final String RecPlayer;
-        final boolean here;
-
-        public tpaArrayClass(String initPlayer, String recPlayer, boolean here) {
-            InitPlayer = initPlayer;
-            RecPlayer = recPlayer;
-            this.here = here;
-            tpaList.add(this);
-        }
-    }
+    /**
+     * key of Entry is the initalizing player's UUID, value is the receiving
+     * player's UUID
+     */
+    public static final HashMap<Map.Entry<String, String>, Boolean> tpaRequestMap = new HashMap<>();
 
     public static void register(Commands commandManager) {
 
@@ -46,8 +37,10 @@ public class tpa {
                                 tpaCommandHandler(player, TargetPlayer, false);
 
                             } catch (Exception e) {
-                                // this shouldn't happen with any of these commands, but if it does happen I am at least printing it to the logs and catching it.
-                                // if it appears that this can happen then I'll add error messages for the client, for now the default minecraft ones will do
+                                // this shouldn't happen with any of these commands, but if it does happen I am
+                                // at least printing it to the logs and catching it.
+                                // if it appears that this can happen then I'll add error messages for the
+                                // client, for now the default minecraft ones will do
                                 Constants.LOGGER.error("Error while sending a tpa request! => ", e);
                                 return 1;
                             }
@@ -101,7 +94,10 @@ public class tpa {
 
                             } catch (Exception e) {
                                 Constants.LOGGER.error("Error while denying a tpa(here) request! => ", e);
-                                player.displayClientMessage(getTranslatedText("commands.teleport_commands.home.setError", player).withStyle(ChatFormatting.RED, ChatFormatting.BOLD), true);
+                                player.displayClientMessage(
+                                        getTranslatedText("commands.teleport_commands.home.setError", player)
+                                                .withStyle(ChatFormatting.RED, ChatFormatting.BOLD),
+                                        true);
                                 return 1;
                             }
 
@@ -109,96 +105,99 @@ public class tpa {
                         })));
     }
 
+    private static void tpaCommandHandler(ServerPlayer FromPlayer, ServerPlayer ToPlayer, boolean here)
+            throws NullPointerException {
+        String ReceivedFromPlayerName = Objects.requireNonNull(FromPlayer.getName().getString(),
+                "FromPlayer name cannot be null");
+        String SentToPlayerName = Objects.requireNonNull(ToPlayer.getName().getString(),
+                "ToPlayer name cannot be null");
 
-    private static void tpaCommandHandler(ServerPlayer FromPlayer, ServerPlayer ToPlayer, boolean here) throws NullPointerException {
-        long playerTpaList = tpa.tpaList.stream()
-                .filter(tpa -> Objects.equals(FromPlayer.getStringUUID(), tpa.InitPlayer))
-                .filter(tpa -> Objects.equals(ToPlayer.getStringUUID(), tpa.RecPlayer))
-                .count();
-
-        if (FromPlayer == ToPlayer) {
-            FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.self", FromPlayer).withStyle(ChatFormatting.AQUA), true);
-
-        } else if (playerTpaList >= 1) {
-            FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.alreadySent", FromPlayer, Component.literal(Objects.requireNonNull(ToPlayer.getName().getString(), "ToPlayer name cannot be null")).withStyle(ChatFormatting.BOLD)).withStyle(ChatFormatting.AQUA)
-                    , true
-            );
-
-        } else {
-            String hereText = here ? "Here" : "";
-
-            // Store da request
-            tpaArrayClass tpaRequest = new tpaArrayClass( FromPlayer.getStringUUID(), ToPlayer.getStringUUID(), here );
-
-            String ReceivedFromPlayer = Objects.requireNonNull(FromPlayer.getName().getString(), "FromPlayer name cannot be null");
-            String SentToPlayer = Objects.requireNonNull(ToPlayer.getName().getString(), "ToPlayer name cannot be null");
-
-            FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.sent", FromPlayer, Component.literal(hereText), Component.literal(SentToPlayer).withStyle(ChatFormatting.BOLD))
-                    //                            .append(Text.literal("\n[Cancel]").formatted(Formatting.BLUE, Formatting.BOLD))
-                    ,true
-            );
-
-            ToPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.received", ToPlayer, Component.literal(hereText), Component.literal(ReceivedFromPlayer).withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD)).withStyle(ChatFormatting.AQUA)
-                    .append("\n")
-                    .append(getTranslatedText("commands.teleport_commands.tpa.accept", ToPlayer)
-                            .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD)
-                            .withStyle(style -> style
-                                    .withClickEvent(
-                                            new ClickEvent.RunCommand(
-                                                    String.format("/tpaaccept %s", ReceivedFromPlayer)
-                                            )
-                                    )
-                            )
-                    )
-                    .append(" ")
-                    .append(getTranslatedText("commands.teleport_commands.tpa.deny", ToPlayer)
-                            .withStyle(ChatFormatting.RED, ChatFormatting.BOLD)
-                            .withStyle(style -> style
-                                    .withClickEvent(
-                                            new ClickEvent.RunCommand(
-                                                    String.format("/tpadeny %s", ReceivedFromPlayer)
-                                            )
-                                    )
-                            )
-                    ),
-                    false
-            );
-
-            Timer timer = new Timer();
-            timer.schedule(
-                    new TimerTask() {
-                        @Override
-                        public void run() {
-                            boolean successful = tpaList.remove(tpaRequest);
-                            if (successful) {
-                                FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.expired", FromPlayer, Component.literal(hereText)).withStyle(ChatFormatting.RED, ChatFormatting.BOLD),true);
-                                ToPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.expired", ToPlayer, Component.literal(hereText)).withStyle(ChatFormatting.WHITE),true);
-                            }
-                            // else not needed since it may be denied/cancelled
-                        }
-                    }, 30 * 1000 // 30 seconds
-            );
+        if (FromPlayer.equals(ToPlayer)) {
+            FromPlayer.displayClientMessage(
+                    getTranslatedText("commands.teleport_commands.tpa.self", FromPlayer).withStyle(ChatFormatting.AQUA),
+                    true);
+            return;
         }
+
+        Map.Entry<String, String> tpaPlayerPair = Map.entry(FromPlayer.getStringUUID(), ToPlayer.getStringUUID());
+
+        if (tpa.tpaRequestMap.containsKey(tpaPlayerPair)) {
+            FromPlayer.displayClientMessage(
+                    getTranslatedText("commands.teleport_commands.tpa.alreadySent", FromPlayer,
+                            Component.literal(Objects.requireNonNull(ToPlayer.getName().getString(),
+                                    "ToPlayer name cannot be null")).withStyle(ChatFormatting.BOLD))
+                            .withStyle(ChatFormatting.AQUA),
+                    true);
+            return;
+        }
+        // Store da request
+        tpa.tpaRequestMap.put(tpaPlayerPair, here);
+
+        String hereText = here ? "Here" : "";
+        FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.sent", FromPlayer,
+                Component.literal(hereText), Component.literal(SentToPlayerName).withStyle(ChatFormatting.BOLD))
+        // .append(Text.literal("\n[Cancel]").formatted(Formatting.BLUE,
+        // Formatting.BOLD))
+                , true);
+
+        ToPlayer.displayClientMessage(
+                getTranslatedText("commands.teleport_commands.tpa.received", ToPlayer, Component.literal(hereText),
+                        Component.literal(ReceivedFromPlayerName).withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD))
+                        .withStyle(ChatFormatting.AQUA)
+                        .append("\n")
+                        .append(getTranslatedText("commands.teleport_commands.tpa.accept", ToPlayer)
+                                .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD)
+                                .withStyle(style -> style
+                                        .withClickEvent(
+                                                new ClickEvent.RunCommand(
+                                                        String.format("/tpaaccept %s", ReceivedFromPlayerName)))))
+                        .append(" ")
+                        .append(getTranslatedText("commands.teleport_commands.tpa.deny", ToPlayer)
+                                .withStyle(ChatFormatting.RED, ChatFormatting.BOLD)
+                                .withStyle(style -> style
+                                        .withClickEvent(
+                                                new ClickEvent.RunCommand(
+                                                        String.format("/tpadeny %s", ReceivedFromPlayerName))))),
+                false);
+
+        Timer timer = new Timer();
+        timer.schedule(
+                new TimerTask() {
+                    @Override
+                    public void run() {
+                        boolean successful = tpaRequestMap.remove(tpaPlayerPair);
+                        if (successful) {
+                            FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.expired",
+                                    FromPlayer, Component.literal(hereText))
+                                    .withStyle(ChatFormatting.RED, ChatFormatting.BOLD), true);
+                            ToPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.expired",
+                                    ToPlayer, Component.literal(hereText)).withStyle(ChatFormatting.WHITE), true);
+                        }
+                        // else not needed since it may be denied/cancelled
+                    }
+                }, 30 * 1000 // 30 seconds
+        );
     }
 
     private static void tpaAccept(ServerPlayer FromPlayer, ServerPlayer ToPlayer) {
-        if (FromPlayer == ToPlayer) {
-            FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.self", FromPlayer).withStyle(ChatFormatting.AQUA), true);
+        if (FromPlayer.equals(ToPlayer)) {
+            FromPlayer.displayClientMessage(
+                    getTranslatedText("commands.teleport_commands.tpa.self", FromPlayer).withStyle(ChatFormatting.AQUA),
+                    true);
             return;
         }
 
         // Check if there is a request
-        Optional<tpaArrayClass> tpaStorage = tpaList.stream()
-                .filter(tpa -> Objects.equals(ToPlayer.getStringUUID(), tpa.InitPlayer))
-                .filter(tpa -> Objects.equals(FromPlayer.getStringUUID(), tpa.RecPlayer))
-                .findFirst();
+        Map.Entry<String, String> tpaPlayerPair = Map.entry(FromPlayer.getStringUUID(), ToPlayer.getStringUUID());
+        Optional<Boolean> tpaRequestHereInfo = Optional.ofNullable(tpa.tpaRequestMap.get(tpaPlayerPair));
 
-        if (tpaStorage.isPresent()) {
+        if (tpaRequestHereInfo.isPresent()) {
             // Request found
-            ServerPlayer destinationPlayer = tpaStorage.get().here ? ToPlayer : FromPlayer;
-            ServerPlayer toSentPlayer = tpaStorage.get().here ? FromPlayer : ToPlayer;
+            ServerPlayer destinationPlayer = tpaRequestHereInfo.get() ? ToPlayer : FromPlayer;
+            ServerPlayer toSentPlayer = tpaRequestHereInfo.get() ? FromPlayer : ToPlayer;
 
-            Optional<BlockPos> teleportData = getSafeBlockPos(destinationPlayer.blockPosition(), destinationPlayer.serverLevel());
+            Optional<BlockPos> teleportData = getSafeBlockPos(destinationPlayer.blockPosition(),
+                    destinationPlayer.serverLevel());
 
             if (teleportData.isPresent()) {
                 BlockPos safeBlockPos = teleportData.get();
@@ -210,35 +209,42 @@ public class tpa {
                 Teleporter(toSentPlayer, destinationPlayer.serverLevel(), destinationPlayer.position());
             }
 
-            // if the player teleported then these messages get sent && the request gets removed
-            FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.accepted", FromPlayer).withStyle(ChatFormatting.WHITE),true);
-            ToPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.accepted", ToPlayer).withStyle(ChatFormatting.GREEN),true);
-            tpaList.remove(tpaStorage.get());
+            // if the player teleported then these messages get sent && the request gets
+            // removed
+            FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.accepted", FromPlayer)
+                    .withStyle(ChatFormatting.WHITE), true);
+            ToPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.accepted", ToPlayer)
+                    .withStyle(ChatFormatting.GREEN), true);
+            tpaRequestMap.remove(tpaPlayerPair);
 
         } else {
             // No request found
-            FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.notFound", FromPlayer).withStyle(ChatFormatting.RED),true);
+            FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.notFound", FromPlayer)
+                    .withStyle(ChatFormatting.RED), true);
         }
     }
 
     private static void tpaDeny(ServerPlayer FromPlayer, ServerPlayer ToPlayer) {
-        if (FromPlayer == ToPlayer) {
-            FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.self", FromPlayer).withStyle(ChatFormatting.AQUA),true);
+        if (FromPlayer.equals(ToPlayer)) {
+            FromPlayer.displayClientMessage(
+                    getTranslatedText("commands.teleport_commands.tpa.self", FromPlayer).withStyle(ChatFormatting.AQUA),
+                    true);
 
         } else {
-            Optional<tpaArrayClass> tpaStorage = tpaList.stream()
-                    .filter(tpa -> Objects.equals(ToPlayer.getStringUUID(), tpa.InitPlayer))
-                    .filter(tpa -> Objects.equals(FromPlayer.getStringUUID(), tpa.RecPlayer))
-                    .findFirst();
+            // Check if there is a request
+            Map.Entry<String, String> tpaPlayerPair = Map.entry(FromPlayer.getStringUUID(), ToPlayer.getStringUUID());
 
-            if (tpaStorage.isPresent()) {
-                tpaList.remove(tpaStorage.get());
+            if (tpa.tpaRequestMap.containsKey(tpaPlayerPair)) {
+                tpaRequestMap.remove(tpaPlayerPair);
 
-                ToPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.denied", ToPlayer).withStyle(ChatFormatting.RED, ChatFormatting.BOLD),true);
-                FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.denied", FromPlayer).withStyle(ChatFormatting.WHITE),true);
+                ToPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.denied", ToPlayer)
+                        .withStyle(ChatFormatting.RED, ChatFormatting.BOLD), true);
+                FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.denied", FromPlayer)
+                        .withStyle(ChatFormatting.WHITE), true);
 
             } else {
-                FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.notFound", FromPlayer).withStyle(ChatFormatting.RED),true);
+                FromPlayer.displayClientMessage(getTranslatedText("commands.teleport_commands.tpa.notFound", FromPlayer)
+                        .withStyle(ChatFormatting.RED), true);
             }
         }
     }

@@ -1,11 +1,10 @@
 package dev.mrsnowy.teleport_commands.common;
 
 import dev.mrsnowy.teleport_commands.storage.StorageManager;
-import net.minecraft.core.BlockPos;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Collections.unmodifiableList;
@@ -13,7 +12,7 @@ import static java.util.Collections.unmodifiableList;
 public class Player {
     private final String UUID;
     private String DefaultHome = "";
-    private final ArrayList<NamedLocation> Homes = new ArrayList<>();
+    private final HashMap<String, NamedLocation> Homes = new HashMap<>();
 
     public Player(String uuid) {
         this.UUID = uuid;
@@ -31,14 +30,12 @@ public class Player {
 
     // returns all homes
     public List<NamedLocation> getHomes() {
-        return unmodifiableList(Homes);
+        return unmodifiableList(new ArrayList<>(Homes.values()));
     }
 
     // returns a specific home based on the name (if there is one)
     public Optional<NamedLocation> getHome(String name)  {
-        return Homes.stream()
-                .filter( home -> Objects.equals( home.getName(), name ))
-                .findFirst();
+        return Optional.ofNullable(Homes.get(name));
     }
 
     // -----
@@ -55,7 +52,7 @@ public class Player {
             return true;
 
         } else {
-            Homes.add(home);
+            Homes.put(home.getName(), home);
             StorageManager.StorageSaver();
             return false;
         }
@@ -64,7 +61,7 @@ public class Player {
     // -----
 
     public void deleteHome(NamedLocation home) throws Exception {
-        Homes.remove(home);
+        Homes.remove(home.getName());
 
         StorageManager.StorageSaver();
     }

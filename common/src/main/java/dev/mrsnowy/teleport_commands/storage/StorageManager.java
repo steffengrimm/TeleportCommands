@@ -12,8 +12,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.Collections.unmodifiableList;
@@ -54,53 +54,50 @@ public class StorageManager {
     public static void StorageSaver() throws Exception {
         // todo! maybe throttle saves?
         Gson gson = new GsonBuilder().create();
-        byte[] json = gson.toJson( StorageManager.STORAGE ).getBytes();
+        byte[] json = gson.toJson(StorageManager.STORAGE).getBytes();
 
         Files.write(STORAGE_FILE, json, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING);
     }
 
-
     public static class StorageClass {
-        private final ArrayList<NamedLocation> Warps = new ArrayList<>();
-        private final ArrayList<Player> Players = new ArrayList<>();
+        private final HashMap<String, NamedLocation> Warps = new HashMap<>();
+        private final HashMap<String, Player> Players = new HashMap<>();
 
         // -----
 
         // returns all warps
         public List<NamedLocation> getWarps() {
-            return unmodifiableList(Warps);
+            return unmodifiableList(new ArrayList<>(Warps.values()));
         }
 
         // filters the warpList and finds the one with the name (if there is one)
         public Optional<NamedLocation> getWarp(String name) {
-            return Warps.stream()
-                    .filter(warp -> Objects.equals(warp.getName(), name))
-                    .findFirst();
+            return Optional.ofNullable(Warps.get(name));
         }
 
         // filters the playerList and finds the one with the uuid (if there is one)
         public Optional<Player> getPlayer(String uuid) {
-            return Players.stream()
-                    .filter( player -> Objects.equals( player.getUUID(), uuid ))
-                    .findFirst();
+            return Optional.ofNullable(Players.get(uuid));
         }
 
         // -----
 
-        // Adds a NamedLocation to the warp list, returns true if a warp with the same name already exists
+        // Adds a NamedLocation to the warp list, returns true if a warp with the same
+        // name already exists
         public boolean addWarp(NamedLocation warp) throws Exception {
             if (getWarp(warp.getName()).isPresent()) {
                 // Warp with same name found!
                 return true;
 
             } else {
-                Warps.add(warp);
+                Warps.put(warp.getName(), warp);
                 StorageSaver();
                 return false;
             }
         }
 
-        // Creates a new player, if there already is a player it will return the existing one. The player won't be saved unless they actually do something lol
+        // Creates a new player, if there already is a player it will return the
+        // existing one. The player won't be saved unless they actually do something lol
         // The name of this function is wack but whatever kewk
         public Player addPlayer(String uuid) {
             final Optional<Player> OptionalPlayer = getPlayer(uuid);
@@ -108,7 +105,7 @@ public class StorageManager {
             if (OptionalPlayer.isEmpty()) {
                 // create and return new player
                 Player player = new Player(uuid);
-                Players.add(player);
+                Players.put(uuid, player);
 
                 return player;
             } else {
@@ -121,7 +118,7 @@ public class StorageManager {
 
         // Remove a warp, if the warp isn't found then nothing will happen
         public void removeWarp(NamedLocation warp) throws Exception {
-            Warps.remove(warp);
+            Warps.remove(warp.getName());
             StorageSaver();
         }
     }
